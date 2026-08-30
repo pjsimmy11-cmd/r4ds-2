@@ -34,5 +34,88 @@ births_tibble <- read_excel("data/us_births_1994_2014.xlsx") |>
   ))
 ```
 
+```{r}
+births_tibble |> 
+  group_by(month, date_of_month) |> 
+  summarize(births = mean(births), .groups = "drop") |> 
+  ggplot(aes(x = date_of_month, y = month, fill = births)) +
+  geom_tile() +
+  scale_y_reverse(breaks = 1:12, labels = month.abb)
+```
+
+```{r}
+christmas_data <- births_tibble |> 
+  filter(month == 12) |> 
+  group_by(year) |> 
+  summarize(
+    day_of_week = day_of_week[date_of_month == 25],
+    births_dec_25 = births[date_of_month == 25],
+    baseline = mean(births[date_of_month %in% c(20:24, 27:30)]),
+    pct_of_baseline = (births_dec_25 / baseline) * 100
+  )
+```
+
+```{r}
+summary(christmas_data)
+```
+
+```{r}
+christmas_data |> 
+  ggplot(aes(x = year, y = pct_of_baseline)) +
+  geom_line() +
+  geom_point(aes(color = day_of_week))
+```
+
+```{r}
+births_model <- lm(births ~ factor(year) + factor(month) + day_of_week,
+                   data = births_tibble)
+
+summary(births_model)$r.squared
+```
+
+```{r}
+births_adjusted <- births_tibble |> 
+  mutate(pct_resid = resid(births_model) / mean(births) * 100)
+
+glimpse(births_adjusted)
+```
+
+```{r}
+calendar_resid <- births_adjusted |> 
+  filter(!(month == 2 & date_of_month == 29)) |> 
+  group_by(month, date_of_month) |> 
+  summarize(mean_pct_resid = mean(pct_resid), .groups = "drop") |> 
+  mutate(calendar_date = as.Date(paste("2001", month, date_of_month, sep = "-")))
+
+calendar_resid
+```
+
+```{r}
+calendar_resid |>
+  ggplot(aes(x = calendar_date, y = mean_pct_resid)) +
+  geom_hline(yintercept = 0, color = "gray60") +
+  geom_line(linewidth = 0.4) +
+  annotate("text", x = as.Date("2001-01-01"), y = -21, label = "Jan. 1", size = 3, hjust = 0.2) +
+  annotate("text", x = as.Date("2001-07-04"), y = -23, label = "July 4", size = 3, hjust = 0.5) +
+  annotate("text", x = as.Date("2001-12-25"), y = -36, label = "Dec. 25", size = 3, hjust = 1) +
+  scale_x_date(date_labels = "%b.", date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::label_percent(scale = 1)) +
+  labs(
+    title = "Fewer Babies Are Born on Holidays",
+    subtitle = "US births relative to year-, month-, and weekday-adjusted baseline (1994-2014)",
+    x = NULL,
+    y = "% vs. adjusted baseline",
+    caption = "Source: FiveThirtyEight/SSA (1994-2014)"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
 
 
