@@ -110,6 +110,80 @@ calendar_resid |>
   theme_minimal()
 ```
 
+```{r}
+read_excel("data/nba_recruits.xlsx") |> 
+  glimpse()
+```
+
+```{r}
+read_excel("data/nba_recruits.xlsx") |>
+  select(rank, nba_mean_ws48, top_mean_wa, total_seasons, drafted) |>
+  summary()
+```
+
+```{r}
+read_excel("data/nba_recruits.xlsx") |>
+  count(tier)
+```
+
+```{r}
+#| cache: true
+basketball_tibble <- read_excel("data/nba_recruits.xlsx") |>
+  mutate(
+    tier = factor(
+      tier,
+      levels = c("Never played", "Brief career", "Solid career",
+                 "All-Star level", "Superstar")
+    ),
+    recruit_group = factor(
+      recruit_group,
+      levels = c("#1–10", "#11–25", "#26–50", "#51–100", "Outside top 100")
+    )
+  )
+```
+
+```{r}
+basketball_tibble |>
+  filter(!is.na(rank), !is.na(top_mean_wa)) |>
+  ggplot(aes(x = rank, y = top_mean_wa, color = tier)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "black", linewidth = 0.5) +
+  geom_text(
+    data = \(d) d |> filter(name %in% c("LeBron James", "Kevin Durant",
+                                         "Klay Thompson")),
+    aes(label = name),
+    nudge_y = 1.2, hjust = 0,
+    size = 3, show.legend = FALSE
+  ) +
+  geom_text(
+    data = \(d) d |> filter(name %in% c("Draymond Green", "Gilbert Arenas")),
+    aes(label = name),
+    nudge_y = 1.2, hjust = 1,
+    size = 3, show.legend = FALSE
+  ) +
+  scale_color_manual(values = c(
+    "Never played"   = "gray80",
+    "Brief career"   = "#74add1",
+    "Solid career"   = "#fee090",
+    "All-Star level" = "#f46d43",
+    "Superstar"      = "#d73027"
+  )) +
+  labs(
+    title = "Does High School Recruit Rank Predict NBA Stardom?",
+    subtitle = "Among players who reached the NBA — rank predicts average careers but not superstars",
+    x = "High school recruit rank (1 = top recruit)",
+    y = "Peak Wins Added (best 5-season average)",
+    color = "Career level",
+    caption = "Source: The Pudding, 2019"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+
 
 
 
